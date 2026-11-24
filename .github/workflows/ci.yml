@@ -1,0 +1,82 @@
+# Private fork CI. Runs on every pull request and on pushes to main.
+# Not published upstream: this file lives only in the private repository.
+#
+# Jobs:
+#   api  - TypeScript typecheck, the TS tests (Vitest), and the JavaScript suite (node --test).
+#   web  - production build of the frontend, and its Vitest suite.
+#
+# Action versions are pinned to the same SHAs the upstream repository uses, so a new release of
+# an action cannot change this workflow without a commit here.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Same major as the Docker images (node:26-alpine), so CI runs the runtime production uses.
+  NODE_VERSION: 26
+  FORCE_COLOR: '1'
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: TypeScript tests
+        run: npm run test:ts
+
+      - name: JavaScript tests
+        run: npm test
+
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Tests
+        run: npm test
