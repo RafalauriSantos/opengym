@@ -92,3 +92,20 @@ Formato: `ADR-NNN`. Não crie outra pasta de ADR.
 - **Decisão**: `RafalauriSantos/opengym` é público. Segredos ficam fora do Git (`.env`, `data/`).
 - **Consequências**: Qualquer commit vira público. Nenhum segredo, dado pessoal ou arquivo local
   entra no histórico. `AUDITORIA.md` fica só na máquina.
+
+## ADR-008: Merge automático por squash quando o CI estiver verde
+
+- **Data**: 2026-11-24
+- **Status**: Aceito
+- **Contexto**: O dono quer que cada PR passe pelo CI e entre na `main` sem clique manual. Hoje não
+  há deploy automático, então o risco do merge é baixo. Isso muda quando houver deploy.
+- **Decisão**: Na `main` vale uma regra (ruleset `main protection`) que exige: PR para entrar,
+  só squash, os checks `api` e `web` verdes e a branch atualizada. Auto-merge está ligado no
+  repositório, e o PR é marcado com `gh pr merge --auto --squash`. Branches são apagadas depois do
+  merge. Sem aprovação de review, porque o projeto tem um dono só.
+- **Consequências**:
+  - *Positivo*: o caminho é um PR e um CI verde, sem passo manual.
+  - *Negativo*: qualquer código que passe nos checks entra na `main`. Quando houver deploy
+    automático, esta decisão deve ser revista.
+  - Os checks `api` e `web` precisam rodar em todo PR. Se um job for removido ou renomeado, a
+    regra precisa ser atualizada junto.

@@ -40,9 +40,11 @@ Windows) podem continuar vermelhas. Até serem resolvidas, registre no PR quais 
 
 ## Merge
 
-- Todo merge é aprovado pelo dono. Nada entra na `main` sem pedido explícito.
-- Não ative auto-merge.
-- Antes do merge: gate local verde, gate remoto verde, branch atualizada com a `main`.
+- Merge automático por squash (ADR-008): o GitHub faz o merge quando `api` e `web` ficam verdes e a branch está atualizada com a `main`.
+- O título do PR vira a mensagem do commit de squash. Escreva o título em Conventional Commits.
+- Sem aprovação de review (projeto de um só dono). Quem abre o PR é o dono que pediu.
+- Não faça merge manual de PR com CI verde.
+- Se o CI falhar, o merge não acontece. Corrija na mesma branch e o CI roda de novo.
 - Migração de banco (quando existir): PR próprio, nunca junto com outras mudanças, aprovado pelo dono.
 
 ## Deploy

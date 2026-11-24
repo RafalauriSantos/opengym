@@ -61,4 +61,4 @@ Valem para todo código escrito neste projeto.
 - Bug: escreva primeiro um teste que reproduz o erro, veja falhar, depois corrija.
 - Não apague código antigo sem avisar. Migração: mude só o que a tarefa exige.
 - Dados de saúde (peso, treinos, fotos) ficam só na infraestrutura escolhida (Vercel, Neon) e não vão para terceiros, nem para serviços de IA sem aprovação do dono.
-- Não ative auto-merge.
+- PR com CI verde faz merge automático por squash (ADR-008). Não faça merge manual se o CI estiver verde.
