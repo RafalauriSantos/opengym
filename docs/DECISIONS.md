@@ -109,3 +109,76 @@ Formato: `ADR-NNN`. Não crie outra pasta de ADR.
     automático, esta decisão deve ser revista.
   - Os checks `api` e `web` precisam rodar em todo PR. Se um job for removido ou renomeado, a
     regra precisa ser atualizada junto.
+
+## ADR-009: Next.js no lugar do Vite
+
+- **Data**: 2026-11-24
+- **Status**: Aceito
+- **Contexto**: O alvo é a Vercel, e o dono já usa Next.js (App Router) no Meu Comércio.
+- **Decisão**: O front e as rotas de API passam para Next.js com App Router. Rotas em
+  `src/app/api/**/route.ts`, mantendo as mesmas URLs e o mesmo JSON. Telas e `lib/` são portados
+  sem reescrita.
+- **Consequências**:
+  - Exige migrar tela por tela, com testes de contrato da API antes de trocar o servidor.
+  - O app de celular (Capacitor) fica congelado até o site estar no ar (ADR-012).
+
+## ADR-010: Multitenant com tenant_id e uma única camada de acesso
+
+- **Data**: 2026-11-24
+- **Status**: Aceito
+- **Contexto**: Cada conta precisa ficar isolada das outras. Filtro espalhado pelas rotas é o
+  risco que o servidor atual tem hoje.
+- **Decisão**:
+  - Toda tabela de dados tem `tenant_id`. Chaves e FKs são compostas `(tenant_id, id)`, então uma
+    FK não cruza contas.
+  - Todo acesso passa por `forTenant(tenantId)`. O cliente do banco não é exportado para fora de
+    `src/shared/db`.
+  - O `tenantId` vem só da sessão no servidor, nunca do corpo, da URL ou de header.
+  - Teste de isolamento com duas contas, e teste que falha se uma tabela nova não tiver `tenant_id`.
+  - Exceção: o catálogo de exercícios é global e só de leitura.
+  - RLS do Postgres entra depois, como reforço. O driver HTTP do Neon não mantém a variável de
+    sessão entre requisições.
+- **Consequências**: Mais disciplina no código. Qualquer tabela nova precisa do `tenant_id`.
+
+## ADR-011: Sincronização por documento; tabelas são derivadas
+
+- **Data**: 2026-11-24
+- **Status**: Aceito
+- **Contexto**: O app funciona offline e mescla os dados entre aparelhos no cliente
+  (`frontend/src/lib/sync-merge.js`). Mudar o protocolo junto com o servidor dobra o risco.
+- **Decisão**: O documento inteiro continua sendo a fonte da verdade, guardado em
+  `sync_documents` com dono, revisão e carimbos. As tabelas normalizadas de treino são derivadas
+  na escrita. O merge no cliente e os testes de sync ficam como estão.
+- **Consequências**:
+  - Migração segura, com dual-run para comparar as duas gravações antes de desligar o arquivo.
+  - Tabelas derivadas precisam ser recalculadas quando o documento muda.
+  - Um documento grande por conta é o limite prático. Revisar quando for um problema real.
+
+## ADR-012: Escopo do primeiro lançamento
+
+- **Data**: 2026-11-24
+- **Status**: Aceito
+- **Contexto**: O dono quer uma base robusta, construída em degraus.
+- **Decisão**:
+  - Modelo de dados completo desde já. Código só para o núcleo: login por passkey, perfil, rotinas,
+    sessões, progresso e sincronização.
+  - Uma pessoa por conta. Grupos (família, academia) ficam para depois.
+  - Só passkey. Senha, e-mail e login externo ficam para depois.
+  - Lembretes de push adiados, até decidir entre plano pago da Vercel ou agendador externo.
+  - Admin e convites ficam para depois.
+  - App de celular congelado até o site estar no ar.
+  - Backup pelo Neon, com retenção de 30 dias.
+  - Depois do núcleo, um de cada vez: coach de IA, integrações (Strava, webhooks), relógios e
+    treinadores. Cada um com o próprio ADR.
+- **Consequências**: O primeiro lançamento é menor. Os itens adiados não são esquecidos: estão no
+  `docs/BACKLOG.md`.
+
+## ADR-013: Registros de treino são marcados como apagados, não apagados fisicamente
+
+- **Data**: 2026-11-24
+- **Status**: Aceito
+- **Contexto**: Histórico de treino é difícil de recuperar se apagado por engano.
+- **Decisão**: Treinos, sessões e medidas ganham `deleted_at`. Apagar marca a data, e as consultas
+  do app ignoram essas linhas. Exclusão física só por ação explícita do dono, fora do app.
+- **Consequências**: Mais cuidado nas consultas, que precisam filtrar `deleted_at`. Um teste deve
+  garantir que nenhuma consulta esquece esse filtro.

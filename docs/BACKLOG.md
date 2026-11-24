@@ -1,57 +1,65 @@
 # Backlog — openGym
 
-Um item por PR. Marque `[x]` quando o item estiver mergeado na `main`. Itens sem decisão
-aparecem em `DECISIONS.md` > Pendente e não são começados antes da decisão.
+Um item por PR. Marque `[x]` quando o item estiver mergeado na `main`. Cada fase segue o
+ADR-012 (escopo) e o ADR-009 (Next.js). Itens sem decisão ficam em `DECISIONS.md` > Pendente.
 
 ## Fase 0 — Base (feito)
 
 - [x] Repositório próprio com histórico base do openGym v1.4.5 (ADR-001)
 - [x] TypeScript na API com `allowJs` (ADR-003)
 - [x] Camada de documentos em Postgres, com testes (ADR-004, ADR-005)
-- [x] CI próprio, `ci.yml`, e remoção dos workflows do upstream (ADR-006)
-- [x] Documentos do projeto: `CLAUDE.md`, `DECISIONS.md`, `docs/DECISIONS.md`, `docs/PROJECT_WORKFLOW.md`
+- [x] CI próprio e merge automático por squash (ADR-006, ADR-008)
+- [x] Documentos do projeto (`CLAUDE.md`, `DECISIONS.md`, `docs/`)
 
-## Fase 1 — Persistência
+## Fase A — Fundação (ninguém sente)
 
-- [ ] Banco Neon provisionado pelo Marketplace da Vercel, com as variáveis no `.env.local`
-- [ ] Migração inicial do Drizzle: tabela `documents`
-- [ ] `db.json` lido e gravado pela camada de documentos
-- [ ] `state-<usuário>.json` lido e gravado pela camada de documentos
-- [ ] Teste de integração contra um Neon de teste (não o de produção)
+- [ ] Drizzle: `drizzle.config.ts` e a primeira migração gerada para `documents`, no lugar do DDL manual
+- [ ] Banco Neon de teste e teste de integração (pulado sem a URL)
+- [ ] Schema de contas e identidade: `tenants`, `users`, `passkey_credentials`, `auth_challenges`, `audit_log`, com `tenant_id` e FKs compostas (ADR-010)
+- [ ] `forTenant(tenantId)` e testes de isolamento entre duas contas, mais o teste que falha se uma tabela não tiver `tenant_id`
 
-## Fase 2 — Servidor
+## Fase B — Next.js no lugar do Vite (comportamento igual)
 
-- [ ] `server.js` exporta um handler em vez de chamar `listen()`
-- [ ] Rotas de autenticação (passkey) funcionando sob o handler
-- [ ] Rotas de treino funcionando sob o handler
-- [ ] Remover `durable.js` e `fsync`, que só fazem sentido com disco local
+- [ ] App Next (App Router) ao lado do `frontend/`, com página de teste e `GET /api/health`
+- [ ] Testes de contrato da API, derivados de `api/openapi.yaml` e de `frontend/src/lib/api*.test.js`, rodando contra o servidor atual
+- [ ] Shell do `App.jsx` e rotas portados, tela por tela, em PRs pequenos (só mover, sem reescrever)
+- [ ] Mesmo resultado nos testes de contrato contra o servidor novo
 
-## Fase 3 — Estado em memória e tarefas agendadas
+## Fase C — API essencial em route handlers
 
-- [ ] Desafios, pareamentos e códigos do relógio saem da memória e vão para o banco, com validade
-- [ ] Limpeza periódica vira tarefa agendada (Vercel Cron)
-- [ ] Lembretes de push viram tarefa agendada
+- [ ] Sessão, cookie assinado e CSRF em `modules/identity`
+- [ ] Registro e login por passkey, com desafios no banco (expirado, reutilizado e de outra conta testados)
+- [ ] Pareamento de dispositivo, com códigos no banco e uso único
+- [ ] Sincronização: `GET /api/data`, `GET /api/data/rev`, `PUT /api/data` sobre `sync_documents` (ADR-011), com teste de conflito e de isolamento entre contas
+- [ ] Dual-run: gravar nos dois lugares e comparar
+- [ ] Importador de `db.json` e `state-*.json`, só se houver dados reais (ver ADR-012)
+- [ ] Desligar `server.js` e `durable.js`
 
-## Fase 4 — Arquivos
+## Fase D — Treino normalizado (só com o app estável)
 
-- [ ] Fotos e vídeos de exercícios próprios vão para o Vercel Blob
-- [ ] Limite de tamanho de upload definido e testado
+- [ ] Tabelas de rotinas, sessões, séries e medidas, derivadas do documento na escrita
+- [ ] `deleted_at` em treinos, sessões e medidas, com teste de que nenhuma consulta esquece o filtro (ADR-013)
+- [ ] Telas de progresso lendo das tabelas, com o mesmo resultado do cálculo atual
 
-## Fase 5 — Deploy
+## Fase E — Arquivos e agendamento
 
-- [ ] Projeto criado na Vercel, ligado ao repositório
-- [ ] `vercel.json` (ou `vercel.ts`) com as rotas da API e do site
-- [ ] Domínio configurado (passkeys exigem HTTPS num domínio)
+- [ ] Fotos e vídeos de exercícios próprios no Vercel Blob, com limite testado
+- [ ] Limpeza periódica por Vercel Cron (plano a decidir)
+
+## Fase F — Deploy e endurecimento
+
+- [ ] Projeto na Vercel ligado ao repositório, com domínio HTTPS (passkey exige)
 - [ ] Guia de rollback em `docs/ROLLBACK.md`
+- [ ] RLS no Postgres como reforço do isolamento (ADR-010)
+- [ ] Falhas antigas das suítes resolvidas ou documentadas
+- [ ] Lint configurado
 
-## Fase 6 — Qualidade
+## Depois, um por vez (cada um com seu ADR)
 
-- [ ] Falhas antigas da suíte JavaScript da API resolvidas ou documentadas
-- [ ] Falhas antigas dos testes do front resolvidas ou documentadas
-- [ ] Lint configurado (hoje não há)
-
-## Depois (sem decisão ainda)
-
-- [ ] Coach de IA (ver `DECISIONS.md` > Pendente)
+- [ ] Lembretes de push (decidir plano da Vercel ou agendador externo)
+- [ ] App de celular (Capacitor), depois que o site estiver no ar
+- [ ] Coach de IA
 - [ ] Integrações: Strava, webhooks
-- [ ] App do relógio (Zepp, Garmin, Apple Watch, Wear OS)
+- [ ] Relógios: Zepp, Garmin, Apple Watch, Wear OS
+- [ ] Admin e convites
+- [ ] Contas em grupo (família, academia)
